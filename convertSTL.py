@@ -49,6 +49,8 @@ print("This STL has " + str(counter) + " faces, giving a total surface area of "
 
 particledensity = Ntotal/area
 
+print("The target number of particles is " + str(Ntotal) + ", giving target particle density of " + str(particledensity) + ".")
+
 counter = 0
 
 for i,line in enumerate(lines):
@@ -70,33 +72,34 @@ for i,line in enumerate(lines):
 			thistriarea = trianglearea(x1,x2,x3)
 			
 			
-			# now populate triangle with N markers - depends on area of this triangle
+			# Now populate triangle with N markers - depends on area of this triangle
 					
-			N = math.sqrt(2*thistriarea*particledensity)
-			if (N <= 2.0):
-				newx = 0.333333*x1 + 0.333333*x2 + 0.333333*x3
-				newline = str(normal[0]) + " " + str(normal[1]) + " " + str(normal[2]) + " " + str(newx[0]) + " " + str(newx[1]) + " " + str(newx[2])
-				PNfile.write(newline)
-				PNfile.write('\n')
-				counter += 1
-			else:
-				N = math.ceil(N)
-				dL = 1.0/N
-				lambda1 = 0.0
-				while lambda1 <= 1.0 + 0.1*dL:
-					lambda2 = 0.0
-					while lambda2 <= 1.0 - lambda1:
-						lambda3 = 1.0 - lambda1 - lambda2
-						assert (lambda3 >= 0.0), "Invalid lambda value of " + str(lambda3)
-						newx = lambda1*x1 + lambda2*x2 + lambda3*x3
-						newline = str(normal[0]) + " " + str(normal[1]) + " " + str(normal[2]) + " " + str(newx[0]) + " " + str(newx[1]) + " " + str(newx[2])
-						PNfile.write(newline)
-						PNfile.write('\n')
-						counter += 1
-						
-						lambda2 += dL
-					
-					lambda1 += dL
+			N = math.ceil(thistriarea*particledensity)
+
+			# First marker goes on the centroid
+
+			newx = 0.333333*x1 + 0.333333*x2 + 0.333333*x3
+			newline = str(normal[0]) + " " + str(normal[1]) + " " + str(normal[2]) + " " + str(newx[0]) + " " + str(newx[1]) + " " + str(newx[2])
+			PNfile.write(newline)
+			PNfile.write('\n')
+			counter += 1
+			thisN = 1
+			
+			while (thisN < N):
+
+				# Randomly seed 'N' markers in this triangle with uniform distribution
+
+				a = np.random.uniform()
+				b = np.random.uniform()
+				
+				if (a + b <= 1.0):
+
+					newx = x1 + a*(x2 - x1) + b*(x3 - x1)
+					newline = str(normal[0]) + " " + str(normal[1]) + " " + str(normal[2]) + " " + str(newx[0]) + " " + str(newx[1]) + " " + str(newx[2])
+					PNfile.write(newline)
+					PNfile.write('\n')
+					counter += 1
+					thisN += 1
 				
 
 print("Created point cloud of " + str(counter) + " points.")
