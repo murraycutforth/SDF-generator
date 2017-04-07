@@ -15,7 +15,7 @@
 
 
 
-void output_SDF_grid (const floatarray3D& sdfarray, unsigned int Nx, unsigned int Ny, unsigned int Nz, float x0, float y0, float z0, float dx, float dy, float dz, std::string filename);
+void output_SDF_grid (const floatarray3D& sdfarray, const intarray3D& activecells, unsigned int Nx, unsigned int Ny, unsigned int Nz, float x0, float y0, float z0, float dx, float dy, float dz, std::string filename);
 
 
 
@@ -25,20 +25,21 @@ int main()
 
 	// Settings for code
 
-	unsigned int Nx = 200;
-	unsigned int Ny = 200;
-	unsigned int Nz = 200;
+	unsigned int Nx = 300;
+	unsigned int Ny = 300;
+	unsigned int Nz = 300;
 	float x0 = -10;
 	float y0 = -10;
 	float z0 = -10;
-	float dx = 0.1;
-	float dy = 0.1;
-	float dz = 0.1;
-	std::string filename = "orion_nofbc";
+	float dx = 0.06666;
+	float dy = 0.06666;
+	float dz = 0.06666;
+	std::string filename = "/local/data2/public/mcc74/APSS_STL/orion_nofbc";
 	int extent = 1;
 
 	
 	std::cout << "Starting SDF generator on file: " << filename << std::endl;
+	std::cout << "~" << std::endl;
 
 
 	std::shared_ptr<weight_fn_base> wf = std::make_shared<polynomial_weight>();
@@ -47,7 +48,7 @@ int main()
 
 
 	PS->load_point_set(filename + ".PN");
-	PS->output_point_set(filename + ".dat");
+	std::cout << "~" << std::endl;
 
 
 
@@ -57,9 +58,9 @@ int main()
 	intarray3D activecells;
 	sdfarray.resize(Nx);
 	activecells.resize(Nx);
-	int UBOUND = 1000000000;
+	int UBOUND = 2;
 	assert(UBOUND > extent);
-	float UNSETVAL = 1e20;
+	float UNSETVAL = 1e10;
 	for (unsigned int i=0; i<Nx; ++i)
 	{
 		sdfarray[i].resize(Ny);
@@ -78,7 +79,9 @@ int main()
 	
 	
 
-	// Decide on cells in which to compute SDF
+	// Tag cells in narrow band around cells which contain marker particles
+	
+	int numAC0 = 0;
 
 	for (int i=0; i<int(Nx); ++i)
 	{
@@ -88,6 +91,8 @@ int main()
 			{
 				if (!(*PS).OParray[i][j][k].empty())
 				{
+					numAC0++;
+					
 					for (int a = std::max(0,i-extent); a<=std::min(int(Nx-1),i+extent); ++a)
 					{
 						for (int b = std::max(0,j-extent); b<=std::min(int(Ny-1),j+extent); ++b)
@@ -105,12 +110,14 @@ int main()
 		std::cout << "\rSetting active cells.. " << (float(i)/Nx)*100 << "% done." << std::flush;
 	}
 	std::cout << "\rActive cells set.                                   " << std::endl;
+	std::cout << "Using this mesh there are " << numAC0 << " cells which contain marker particles." << std::endl;
+	std::cout << "~" << std::endl;
 
 
 
-	// Compute SDF in all cells within 'extent' of interface using APSS method
+	// Compute SDF in all tagged cells using APSS method
 	
-	float x, y, z, h1, h0 = 0.249999*std::min({dx, dy, dz});
+	float x, y, z, h, h0 = 0.249999*std::min({dx, dy, dz});
 	Nvector pos (3,0.0);
 
 	for (unsigned int i=0; i<Nx; ++i)
@@ -123,7 +130,7 @@ int main()
 
 			for (unsigned int k=0; k<Nz; ++k)
 			{
-				if (activecells[i][j][k] < UBOUND)
+				if (activecells[i][j][k] != UBOUND)
 				{
 
 					z = z0 + 0.5*dz + k*dz;
@@ -134,6 +141,7 @@ int main()
 					pos.data[2] = z;
 
 					sdfarray[i][j][k] = kenneth.evaluate_surface(pos, h);
+					assert(sdfarray[i][j][k] != UNSETVAL);
 				}
 			}
 		}
@@ -141,14 +149,31 @@ int main()
 		std::cout << "\rComputing SDF in active cells.. " << (float(i)/Nx)*100 << "% done." << std::flush;
 	}
 	std::cout << "\rAPSS computation complete.                                   " << std::endl;
-
+	std::cout << "~" << std::endl;
+	
+	
+	
+	// Prepare the activecells array to close the zero level set surface
+	
+	assert(extent == 1); // Need to do nothing for now if this is true
+	
+	
+	// Single fast sweeping iteration should be sufficient to guarantee closed surface?
+	
+	std::cout << "Starting fast sweeping procedure to close the zero level set surface." << std::endl;
+	
+	fast_sweeping_method_closesurface (sdfarray, activecells, kenneth, Nx, Ny, Nz, dx, dy, dz, x0, y0, z0, UBOUND, UNSETVAL);
+	
+	std::cout << "\rSurface closed.                                 " << std::endl << "~" << std::endl;
 
 
 	// Single iteration of the fast sweeping method should now by sufficient to set signed distance values in the rest of the domain
 
-	std::cout << "Starting marching procedure." << std::endl;
+	std::cout << "Starting fast sweeping procedure to set value in bulk cells." << std::endl;
 
-	fast_sweeping_method (sdfarray, activecells, Nx, Ny, Nz, dx, dy, dz, UNSETVAL, UBOUND);
+	fast_sweeping_method_fillbulkcells (sdfarray, activecells, Nx, Ny, Nz, dx, dy, dz, UNSETVAL, UBOUND);
+	
+	std::cout << "Sweeps complete." << std::endl << "~" << std::endl;
 	
 	std::cout << "\rAll computation complete.                                                         " << std::endl;
 
@@ -156,7 +181,7 @@ int main()
 
 
 
-	output_SDF_grid(sdfarray,Nx,Ny,Nz,x0,y0,z0,dx,dy,dz,filename);
+	output_SDF_grid(sdfarray,activecells,Nx,Ny,Nz,x0,y0,z0,dx,dy,dz,filename);
 
 	std::cout << "Code complete!" << std::endl;
 
@@ -164,7 +189,7 @@ int main()
 }
 
 
-void output_SDF_grid (const floatarray3D& sdfarray, unsigned int Nx, unsigned int Ny, unsigned int Nz, float x0, float y0, float z0, float dx, float dy, float dz, std::string filename)
+void output_SDF_grid (const floatarray3D& sdfarray, const intarray3D& activecells, unsigned int Nx, unsigned int Ny, unsigned int Nz, float x0, float y0, float z0, float dx, float dy, float dz, std::string filename)
 {
 	/*
 	 *	Store the 3D SDF in an ASCII VTK file for viewing in Visit
@@ -181,7 +206,7 @@ void output_SDF_grid (const floatarray3D& sdfarray, unsigned int Nx, unsigned in
 	vtkfile << "ORIGIN " <<x0<<" "<<y0<<" " <<z0<<"\n";
 	vtkfile << "SPACING "<<dx<<" "<<dy<<" "<<dz<<"\n";
 	vtkfile << "POINT_DATA " << (Nx*Ny*Nz) << "\n";
-	vtkfile << "SCALARS scalars float 1\n";
+	vtkfile << "SCALARS sdf float 1\n";
 	vtkfile << "LOOKUP_TABLE default\n";
 
 	for (unsigned int z=0; z<Nz; z++)
@@ -197,7 +222,7 @@ void output_SDF_grid (const floatarray3D& sdfarray, unsigned int Nx, unsigned in
 	vtkfile << "\n";
 	std::cout << "\rWriting SDF to file.. " << (float(z)/Nz)*100 << "% done." << std::flush;
 	}
-	
+
 	std::cout << "\rVTK output complete.                                   " << std::endl;
 	vtkfile.close();
 }
