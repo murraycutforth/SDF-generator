@@ -19,7 +19,7 @@
 
 #include "PS_storage.hpp"
 #include "Nvector.hpp"
-#include <memory>		// C++11
+#include <memory>	
 
 
 class APSS {

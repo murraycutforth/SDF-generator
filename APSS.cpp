@@ -30,14 +30,6 @@ float APSS :: evaluate_surface (const Nvector& x, float h0) const
 		PS_ptr->get_weighted_points(x,wps,h);
 		h *= 2.0;
 	}
-
-//	PS_ptr->get_weighted_points(x,wps,h);
-//	if (wps.empty())
-//	{
-//		std::cout << std::endl << "Empty point set! Using h = " << h << std::endl;
-//		std::cout << "pos = " << x.data[0] << "," << x.data[1] << "," << x.data[2] << std::endl;
-//	}
-//	assert(!wps.empty());
 	
 	
 	// Initialise storage for various sums

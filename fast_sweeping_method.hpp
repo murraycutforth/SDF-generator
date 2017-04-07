@@ -1,10 +1,22 @@
-#ifndef FSM_H
+/*
+ * DESCRIPTION
+ * 	These functions implement the fast sweeping method in 3D to close the zero level set
+ * 	surface, and set the values away from the narrow band to the appropriate sign.
+ * 	They each consist of 8 iterations over every single cell, in various orderings such
+ * 	that all characteristic directions are covered.
+ * 
+ * AUTHOR
+ * 	Murray Cutforth
+ * 
+ * Date
+ * 	07/04/2017
+ */
 
+#ifndef FSM_H
 
 #include "APSS.hpp"
 #include "Nvector.hpp"
 #include <vector>
-
 
 typedef std::vector<std::vector<std::vector<float> > > floatarray3D;
 typedef std::vector<std::vector<std::vector<int> > > intarray3D;

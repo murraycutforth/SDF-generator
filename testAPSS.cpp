@@ -15,7 +15,21 @@
 
 
 
-void output_SDF_grid (const floatarray3D& sdfarray, const intarray3D& activecells, unsigned int Nx, unsigned int Ny, unsigned int Nz, float x0, float y0, float z0, float dx, float dy, float dz, std::string filename);
+void output_SDF_grid (
+
+	const floatarray3D& sdfarray, 
+	const intarray3D& activecells, 
+	unsigned int Nx, 
+	unsigned int Ny, 
+	unsigned int Nz, 
+	float x0, 
+	float y0, 
+	float z0, 
+	float dx, 
+	float dy, 
+	float dz, 
+	std::string filename
+);
 
 
 
@@ -23,7 +37,7 @@ void output_SDF_grid (const floatarray3D& sdfarray, const intarray3D& activecell
 int main()
 {
 
-	// Settings for code
+	// Code settings are hardcoded here for now
 
 	unsigned int Nx = 300;
 	unsigned int Ny = 300;
@@ -45,14 +59,12 @@ int main()
 	std::shared_ptr<weight_fn_base> wf = std::make_shared<polynomial_weight>();
 	std::shared_ptr<PS_storage_3D> PS = std::make_shared<PS_storage_3D>(Nx,Ny,Nz,x0,y0,z0,dx,dy,dz,wf);
 	APSS kenneth (PS, true);
-
-
 	PS->load_point_set(filename + ".PN");
 	std::cout << "~" << std::endl;
 
 
 
-	// Set size and intialise 3D arrays
+	// Initialise 3D arrays
 
 	floatarray3D sdfarray;		// See fast_sweeping_method.hpp for type definition
 	intarray3D activecells;
@@ -79,7 +91,7 @@ int main()
 	
 	
 
-	// Tag cells in narrow band around cells which contain marker particles
+	// Tag all cells in narrow band around cells which contain marker particles
 	
 	int numAC0 = 0;
 
@@ -152,44 +164,44 @@ int main()
 	std::cout << "~" << std::endl;
 	
 	
-	
-	// Prepare the activecells array to close the zero level set surface
-	
-	assert(extent == 1); // Need to do nothing for now if this is true
-	
-	
 	// Single fast sweeping iteration should be sufficient to guarantee closed surface?
 	
 	std::cout << "Starting fast sweeping procedure to close the zero level set surface." << std::endl;
-	
 	fast_sweeping_method_closesurface (sdfarray, activecells, kenneth, Nx, Ny, Nz, dx, dy, dz, x0, y0, z0, UBOUND, UNSETVAL);
-	
 	std::cout << "\rSurface closed.                                 " << std::endl << "~" << std::endl;
 
 
-	// Single iteration of the fast sweeping method should now by sufficient to set signed distance values in the rest of the domain
+	// Single iteration of the fast sweeping method is sufficient to set signed distance values in the rest of the domain
 
 	std::cout << "Starting fast sweeping procedure to set value in bulk cells." << std::endl;
-
 	fast_sweeping_method_fillbulkcells (sdfarray, activecells, Nx, Ny, Nz, dx, dy, dz, UNSETVAL, UBOUND);
-	
 	std::cout << "Sweeps complete." << std::endl << "~" << std::endl;
-	
 	std::cout << "\rAll computation complete.                                                         " << std::endl;
 
 
-
-
-
 	output_SDF_grid(sdfarray,activecells,Nx,Ny,Nz,x0,y0,z0,dx,dy,dz,filename);
-
 	std::cout << "Code complete!" << std::endl;
-
 	return 0;
 }
 
 
-void output_SDF_grid (const floatarray3D& sdfarray, const intarray3D& activecells, unsigned int Nx, unsigned int Ny, unsigned int Nz, float x0, float y0, float z0, float dx, float dy, float dz, std::string filename)
+
+
+void output_SDF_grid (
+
+	const floatarray3D& sdfarray, 
+	const intarray3D& activecells, 
+	unsigned int Nx, 
+	unsigned int Ny, 
+	unsigned int Nz, 
+	float x0, 
+	float y0, 
+	float z0, 
+	float dx, 
+	float dy, 
+	float dz, 
+	std::string filename
+)
 {
 	/*
 	 *	Store the 3D SDF in an ASCII VTK file for viewing in Visit
